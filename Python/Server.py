@@ -1,3 +1,4 @@
+import threading
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
@@ -93,7 +94,27 @@ def order_dish():
 @app.route('/add_dish', methods=['POST'])
 def add_dish():
     data = request.json
-    
+    dish_id = data.get("dish_id")
+    #dish_name = data.get("dish_name")
+    #ingredients = data.get("ingredients")
+    price = data.get("price")
+    with lock:
+        # Check if the dishId already exists
+        if dish_id in dishes:
+            return jsonify({"error": "Dish with that id already exists"}), 400   
+        # Check if price is posiitve 
+        if price <=0:
+            return jsonify({"error": "Price has to be positive"}), 400    
+        
+        # Add the dish to the dishes
+        new_dish_id = max(dishes.keys(), default=0) + 1
+
+        dishes[new_dish_id] = [True, price]
+
+        return jsonify({"message": "Dish added successfully"}), 200
+
+    return jsonify({"error": "Unexpected error"},400)
+
 
 # TODO: Finish
 @app.route('/remove_dish', methods=['POST'])
