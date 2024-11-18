@@ -1,6 +1,4 @@
 from flask import Flask, request, jsonify
-import threading
-import bcrypt
 
 app = Flask(__name__)
 
@@ -27,32 +25,37 @@ def create_customer():
     if not all([customer_name]):
         return jsonify({"error": "Missing required parameters"}), 400
 
-    # Check if the customer is already there, if it is -> return an error
-    if customer_name in customers.values:
-        return jsonify({"error": "Customer with the same name already registered"},409)
+    with lock:
+        # Check if the customer is already there, if it is -> return an error
+        if customer_name in customers.values:
+            return jsonify({"error": "Customer with the same name already registered"},409)
 
-    # If its not, add the customer
-    mew_customer_id = max(customers.keys(), default=0) + 1
-    customers[mew_customer_id] = customer_name
+        # If its not, add the customer
+        mew_customer_id = max(customers.keys(), default=0) + 1
+        customers[mew_customer_id] = customer_name
+        return jsonify({"message": "Customer created successfully"}, 200)
     
-    return jsonify({"message": "Customer created successfully"}, 200)
+    return jsonify({"error": "Unexpected error"},400)
 
 
-# TODO: check if the customerId is an int
 @app.route('/remove_customer', methods=['POST'])
 def remove_customer():
     data = request.json
     customer_id = data.get('customer_id')
+    # TODO: check if the customerId is an int
     # Check the required data
     if not all([customer_id]):
         return jsonify({"error": "Missing required parameters"}), 400
+    with lock:
+        # Check if the customerId is in use, if its not -> return an error
+        if customer_id not in customers:
+            return jsonify({"error": "No Customer with Id provided"},400)
+        
+        # Delete the customer and their data
+        delete_customer(customer_id)
+        return jsonify({"message": "Customer removed successfully"}), 200
 
-    # Check if the customerId is in use, if its not -> return an error
-    if customer_id not in customers:
-        return jsonify({"error": "No Customer with Id provided"},400)
-    
-    # Delete the customer and their data
-    delete_customer(customer_id)
+    return jsonify({"error": "Unexpected error"},400)
 
 # TODO: add an endpoint to check dish availability
 
@@ -66,17 +69,24 @@ def order_dish():
     # Check the required data
     if not all([customer_id]):
         return jsonify({"error": "Missing required parameters"}), 400
-    # Check if the customerId and dishId is correct
-    if customer_id not in customers:
-        return jsonify({"error": "No customer with provided id"}), 400    
-    if dish_id not in dishes:
-        return jsonify({"error": "No dish with provided id"}), 400    
-    # Check if the dish is available
-    if dishes[dish_id][0] == False:
-        return jsonify({"error": "Dish not available"}), 400    
     
-    # Add the dish to the customer's order
-    customers_x_dishes[customer_id] = customers_x_dishes.get(customer_id, []).add(dish_id) 
+    with lock:
+        # Check if the customerId and dishId is correct
+        if customer_id not in customers:
+            return jsonify({"error": "No customer with provided id"}), 400    
+        if dish_id not in dishes:
+            return jsonify({"error": "No dish with provided id"}), 400    
+        # Check if the dish is available
+        if dishes[dish_id][0] == False:
+            return jsonify({"error": "Dish not available"}), 400    
+        
+        # Add the dish to the customer's order
+        customers_x_dishes[customer_id] = customers_x_dishes.get(customer_id, []).add(dish_id) 
+    
+        return jsonify({"message": "Dish ordered successfully"}), 200
+
+    return jsonify({"error": "Unexpected error"},400)
+
 
 
 # TODO: Finish
