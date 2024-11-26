@@ -12,8 +12,5 @@ app.register_blueprint(dish_routes.dish_blueprint, url_prefix='/api/dish')
 
 
 
-
-
-
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000)
