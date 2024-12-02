@@ -1,15 +1,19 @@
 from flask import Blueprint, request, jsonify
-from services.dish_service import order_dish, add_dish, remove_dish, pay_dish
+
+from services.dish_service import order_dish, add_dish, remove_dish, pay_dish, get_all_dishes
+from utils.auth_utils import customer_role_required, kitchen_role_required
 
 dish_blueprint = Blueprint('dish', __name__)
 
 @dish_blueprint.route('/order_dish', methods=['POST'])
+@customer_role_required
 def order_dish_route():
     """
-    Ordering a dish
+    Order a Dish
     ---
     tags:
-      - Ordering a dish
+      - Dish Operations
+    summary: Place an order for a specific dish.
     parameters:
       - name: body
         in: body
@@ -19,15 +23,15 @@ def order_dish_route():
           properties:
             customer_id:
               type: string
-              description: The unique identifier of the customer
+              description: The unique identifier of the customer.
               example: "12345"
             dish_id:
               type: string
-              description: The unique identifier of the dish
+              description: The unique identifier of the dish.
               example: "67890"
     responses:
       200:
-        description: Success
+        description: Dish ordered successfully.
         schema:
           type: object
           properties:
@@ -35,7 +39,7 @@ def order_dish_route():
               type: string
               example: "Dish ordered successfully!"
       400:
-        description: Failure
+        description: Missing or invalid parameters.
         schema:
           type: object
           properties:
@@ -47,12 +51,14 @@ def order_dish_route():
     return order_dish(data)
 
 @dish_blueprint.route('/add_dish', methods=['POST'])
+@kitchen_role_required
 def add_dish_route():
     """
-    Adding a dish
+    Add a New Dish
     ---
     tags:
-      - Adding a dish
+      - Dish Operations
+    summary: Add a new dish to the menu. Requires appropriate user permissions.
     parameters:
       - name: body
         in: body
@@ -62,23 +68,31 @@ def add_dish_route():
           properties:
             dish_id:
               type: string
-              description: The unique identifier of the dish
+              description: The unique identifier of the dish.
               example: "67890"
             price:
               type: number
-              description: Price of the dish
+              description: The price of the dish.
               example: 15.99
     responses:
       200:
-        description: Success
+        description: Dish added successfully.
         schema:
           type: object
           properties:
             message:
               type: string
               example: "Dish added successfully!"
+      403:
+        description: Permission denied.
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: "You do not have permission to add a dish"
       400:
-        description: Failure
+        description: Missing or invalid parameters.
         schema:
           type: object
           properties:
@@ -90,12 +104,14 @@ def add_dish_route():
     return add_dish(data)
 
 @dish_blueprint.route('/remove_dish', methods=['POST'])
+@kitchen_role_required
 def remove_dish_route():
     """
-    Removing a dish
+    Remove a Dish
     ---
     tags:
-      - Removing a dish
+      - Dish Operations
+    summary: Remove a dish from the menu.
     parameters:
       - name: body
         in: body
@@ -105,11 +121,11 @@ def remove_dish_route():
           properties:
             dish_id:
               type: string
-              description: The unique identifier of the dish
+              description: The unique identifier of the dish.
               example: "67890"
     responses:
       200:
-        description: Success
+        description: Dish removed successfully.
         schema:
           type: object
           properties:
@@ -117,7 +133,7 @@ def remove_dish_route():
               type: string
               example: "Dish removed successfully!"
       400:
-        description: Failure
+        description: Missing or invalid parameters.
         schema:
           type: object
           properties:
@@ -129,12 +145,14 @@ def remove_dish_route():
     return remove_dish(data)
 
 @dish_blueprint.route('/pay_dish', methods=['POST'])
+@customer_role_required
 def pay_dish_route():
     """
-    Paying for a dish
+    Pay for Dishes
     ---
     tags:
-      - Paying for a dish
+      - Dish Operations
+    summary: Make a payment for the ordered dishes.
     parameters:
       - name: body
         in: body
@@ -144,15 +162,15 @@ def pay_dish_route():
           properties:
             customer_id:
               type: string
-              description: The unique identifier of the customer
+              description: The unique identifier of the customer.
               example: "12345"
             total_price:
               type: number
-              description: Total price of the dishes
+              description: The total price of the ordered dishes.
               example: 45.50
     responses:
       200:
-        description: Success
+        description: Payment successful.
         schema:
           type: object
           properties:
@@ -160,7 +178,7 @@ def pay_dish_route():
               type: string
               example: "Payment successful!"
       400:
-        description: Failure
+        description: Missing or invalid parameters.
         schema:
           type: object
           properties:
@@ -170,3 +188,31 @@ def pay_dish_route():
     """
     data = request.json
     return pay_dish(data)
+
+@dish_blueprint.route('/get_all_dishes', methods=['GET'])
+def get_all_dishes_route():
+    """
+    Get All Dishes
+    ---
+    tags:
+      - Dish Menu
+    responses:
+      200:
+        description: List of all dishes
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              dish_id:
+                type: string
+                example: "dish1"
+              available:
+                type: boolean
+                example: true
+              price:
+                type: number
+                example: 12.99
+    """
+    return get_all_dishes()  # Call the function directly, no need to wrap with jsonify
+

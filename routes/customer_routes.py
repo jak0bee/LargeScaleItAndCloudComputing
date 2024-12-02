@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify
 from services.customer_service import create_customer, remove_customer
+from utils.auth_utils import customer_role_required
 
 bp = Blueprint('customer_routes', __name__)
 
 @bp.route('/create_customer', methods=['POST'])
+@customer_role_required
 def create_customer_route():
     """
 Creating new customer and assigning him unique identifier
@@ -38,6 +40,7 @@ responses:
     return create_customer(request.json)
 
 @bp.route('/remove_customer', methods=['POST'])
+@customer_role_required
 def remove_customer_route():
     """
 Creating new customer and assigning him unique identifier

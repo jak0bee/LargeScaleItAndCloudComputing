@@ -80,3 +80,18 @@ def pay_dish(data):
         customers_x_dishes[customer_id] = []
 
         return jsonify({"message": "Payment successful", "total_price": total_price}), 200
+
+
+def get_all_dishes():
+    """
+    Returns a list of all dishes with their availability and price.
+    """
+    with lock:
+        all_dishes = []
+        for dish_id, (available, price) in dishes.items():
+            all_dishes.append({
+                "dish_id": dish_id,
+                "available": available,
+                "price": price
+            })
+        return jsonify(all_dishes), 200
