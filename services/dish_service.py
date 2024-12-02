@@ -1,5 +1,7 @@
-from models.dish_model import dishes
+from models.kitchen_model import dishes
 from models.customer_model import customers_x_dishes
+from models.customer_model import customers
+from models.customer_model import orders
 from utils.lock_manager import lock
 from flask import jsonify
 
@@ -12,17 +14,16 @@ def order_dish(data):
         return jsonify({"error": "Missing required parameters"}), 400
 
     with lock:
-        if customer_id not in customers_x_dishes:
+        if customer_id not in customers:
             return jsonify({"error": "No customer with provided id"}), 400
         if dish_id not in dishes:
             return jsonify({"error": "No dish with provided id"}), 400
         if not dishes[dish_id][0]:  # Check if dish is available
             return jsonify({"error": "Dish not available"}), 400
 
-        # Add the dish to the customer's order list
-        order_list = customers_x_dishes.get(customer_id, [])
-        order_list.append(dish_id)
-        customers_x_dishes[customer_id] = order_list
+        # Add the dish to the list of orders to be prepared
+        new_order = {dish_id: customer_id}
+        orders.append(new_order)
 
         return jsonify({"message": "Dish ordered successfully"}), 200
 
@@ -95,3 +96,23 @@ def get_all_dishes():
                 "price": price
             })
         return jsonify(all_dishes), 200
+    
+def prepare_next_dish():
+    """
+    Prepares the next dish in the orders queue (here instantly). This should be called any time a kitchen / cook is free
+    """
+    with lock:
+        if not orders:
+            return jsonify({"error": "No orders to prepare"}), 400
+
+        # Get the first order in the queue
+        order = orders.pop(0)
+        dish_id, customer_id = order.popitem()
+
+        # Add the dish to the  customer's bill
+        customer_bill = customers_x_dishes.get(customer_id, [])
+        customer_bill.append(dish_id)
+        customers_x_dishes[customer_id] = customer_bill
+
+        return jsonify({"message": f"Dish {dish_id} prepared for customer {customer_id}"}), 200
+    

@@ -1,2 +1,7 @@
-customers = {}
-customers_x_dishes = {} # library with key being customers_id and then value is a list of dishes that the customer ordered
+customers = {
+    # Customer_id: Customer_name
+}
+
+customers_x_dishes = { # Those are the dishes that the customer already got, the orders that are waiting to/being prepared are in the orders queue in the kitchen
+    # Customer_id: [dish_id]
+} 
