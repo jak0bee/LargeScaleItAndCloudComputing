@@ -83,6 +83,18 @@ def pay_dish(data):
 
         return jsonify({"message": "Payment successful", "total_price": total_price}), 200
 
+def check_dish_availability(data):
+    dish_id = data.get('dish_id')
+
+    if not dish_id:
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    with lock:
+        if dish_id not in dishes:
+            return jsonify({"error": "No dish with provided id"}), 400
+        message = "There are " + dishes[dish_id][0] + dishes[dish_id][1] + " available"
+        
+        return jsonify({"message", message}), 200
 
 def get_all_dishes():
     """
