@@ -80,7 +80,7 @@ def login_callback():
         return redirect(next_url)
 
     # If there's no stored 'next' URL, redirect to the profile page
-    return redirect(url_for('.profile'))
+    return redirect("/apidocs")
 
 
 @bp.route('/profile', methods=['GET'])
