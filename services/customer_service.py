@@ -16,7 +16,11 @@ def create_customer(data):
         return jsonify({"message": "Customer created successfully"}), 200
 
 def remove_customer(data):
-    customer_id = data.get('customer_id')
+    print(data)
+    customer_id = int(data.get('customer_id'))
+    print(customer_id)
+    print(customers)
+
     if not customer_id:
         return jsonify({"error": "Missing required parameters"}), 400
 
@@ -28,5 +32,5 @@ def remove_customer(data):
         return jsonify({"message": "Customer removed successfully"}), 200
 
 def delete_customer(customer_id):
-    del customers_x_dishes[customer_id]
+    #del customers_x_dishes[customer_id]
     del customers[customer_id]

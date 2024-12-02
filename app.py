@@ -38,7 +38,7 @@ def enforce_authorization_rules():
     # Permit all other requests
     return None
 
-
+# Now listens to Port 8080 to enable the correct gitlab redirect uri 
 if __name__ == "__main__":
     # Disable the HTTPS requirement for OAuth2 (use only for development)
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
