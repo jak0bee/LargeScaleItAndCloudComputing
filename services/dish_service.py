@@ -18,12 +18,13 @@ def order_dish(data):
             return jsonify({"error": "No customer with provided id"}), 400
         if dish_id not in dishes:
             return jsonify({"error": "No dish with provided id"}), 400
-        if not dishes[dish_id][0]:  # Check if dish is available
+        if dishes[dish_id][0] <= 0:  # Check if dish is available
             return jsonify({"error": "Dish not available"}), 400
 
         # Add the dish to the list of orders to be prepared
         new_order = {dish_id: customer_id}
         orders.append(new_order)
+        dishes[dish_id][0] -= 1  # Decrease the availability of the dish
 
         return jsonify({"message": "Dish ordered successfully"}), 200
 
@@ -113,6 +114,9 @@ def prepare_next_dish():
         customer_bill = customers_x_dishes.get(customer_id, [])
         customer_bill.append(dish_id)
         customers_x_dishes[customer_id] = customer_bill
+
+        # Decrease the availability of the dish
+        dishes[dish_id][0] -= 1
 
         return jsonify({"message": f"Dish {dish_id} prepared for customer {customer_id}"}), 200
     
