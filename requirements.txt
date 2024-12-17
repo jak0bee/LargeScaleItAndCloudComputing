@@ -1,0 +1,4 @@
+Flask
+flasgger
+gunicorn
+requests_oauthlib
