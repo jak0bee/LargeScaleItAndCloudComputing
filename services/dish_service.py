@@ -1,4 +1,4 @@
-from models.kitchen_model import dishes
+from models.kitchen_model import dishes, orders
 from models.customer_model import customers_x_dishes
 from models.customer_model import customers
 #from models.customer_model import orders
@@ -10,11 +10,14 @@ def order_dish(data):
     customer_id = data.get('customer_id')
     dish_id = data.get('dish_id')
 
-    if not customer_id or not dish_id:
+    if customer_id is None or dish_id is None:
         return jsonify({"error": "Missing required parameters"}), 400
+
+    customer_id = int(customer_id)
 
     with lock:
         if customer_id not in customers:
+            print(customers)
             return jsonify({"error": "No customer with provided id"}), 400
         if dish_id not in dishes:
             return jsonify({"error": "No dish with provided id"}), 400
@@ -38,13 +41,17 @@ def add_dish(data):
 
     with lock:
         if dish_id in dishes:
-            return jsonify({"error": "Dish with that id already exists"}), 400
+            if price <= 0:
+                return jsonify({"error": "Price must be positive"}), 400
+            dishes[dish_id][0] += 1  # Increment availability
+            return jsonify({"message": "Dish availability increased"}), 200
         if price <= 0:
             return jsonify({"error": "Price must be positive"}), 400
 
-        # Add the dish with availability set to True
-        dishes[dish_id] = [True, price]
+        # Add the dish with availability set to 1
+        dishes[dish_id] = [1, price]
         return jsonify({"message": "Dish added successfully"}), 200
+
 
 # Remove a dish from the menu
 def remove_dish(data):
@@ -65,8 +72,10 @@ def remove_dish(data):
 def pay_dish(data):
     customer_id = data.get('customer_id')
 
-    if not customer_id:
+    if customer_id is None:  # Check for missing parameter
         return jsonify({"error": "Missing required parameters"}), 400
+
+    customer_id = int(customer_id)  # Ensure it's an integer
 
     with lock:
         if customer_id not in customers_x_dishes or not customers_x_dishes[customer_id]:
@@ -83,6 +92,8 @@ def pay_dish(data):
 
         return jsonify({"message": "Payment successful", "total_price": total_price}), 200
 
+
+
 def check_dish_availability(data):
     dish_id = data.get('dish_id')
 
@@ -92,9 +103,13 @@ def check_dish_availability(data):
     with lock:
         if dish_id not in dishes:
             return jsonify({"error": "No dish with provided id"}), 400
-        message = "There are " + dishes[dish_id][0] + dishes[dish_id][1] + " available"
-        
-        return jsonify({"message", message}), 200
+
+        amount_available = int(dishes[dish_id][0])
+        price = dishes[dish_id][1]
+        message = f"There are {amount_available} dishes available at a price of {price}"
+
+        return jsonify({"message": message}), 200
+
 
 def get_all_dishes():
     """
@@ -109,7 +124,21 @@ def get_all_dishes():
                 "price": price
             })
         return jsonify(all_dishes), 200
-    
+
+def get_all_customers_dishes():
+    """
+    Returns a list of all customers with their received dishes.
+    """
+    with lock:
+        all_customers_dishes = []
+        for customer_id, dishes_list in customers_x_dishes.items():
+            all_customers_dishes.append({
+                "customer_id": customer_id,
+                "dishes": dishes_list
+            })
+        return jsonify(all_customers_dishes), 200
+
+
 def prepare_next_dish():
     """
     Prepares the next dish in the orders queue (here instantly). This should be called any time a kitchen / cook is free
@@ -127,8 +156,8 @@ def prepare_next_dish():
         customer_bill.append(dish_id)
         customers_x_dishes[customer_id] = customer_bill
 
-        # Decrease the availability of the dish
-        dishes[dish_id][0] -= 1
+        # No need to decrease availability, because it will be decresed upon ordering -
+        # Prohibits ordering a dish that will become unavailable later
 
         return jsonify({"message": f"Dish {dish_id} prepared for customer {customer_id}"}), 200
     

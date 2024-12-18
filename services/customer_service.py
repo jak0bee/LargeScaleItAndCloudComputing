@@ -3,26 +3,29 @@ from utils.lock_manager import lock
 from flask import jsonify
 
 def create_customer(data):
+    # Extract 'customer_name' from the request data
     customer_name = data.get('customer_name')
-    if not customer_name:
-        return jsonify({"error": "Missing required parameters"}), 400
 
-    with lock:
-        if customer_name in customers.values():
-            return jsonify({"error": "Customer with the same name already registered"}), 409
+    # Check if 'customer_name' is missing or invalid
+    if not isinstance(customer_name, str) or customer_name.strip() == "":
+        return jsonify({"error": "Customer name cannot be empty"}), 400
 
-        new_customer_id = max(customers.keys(), default=0) + 1
-        customers[new_customer_id] = customer_name
-        return jsonify({"message": "Customer created successfully"}), 200
+    # Reuse the lowest available ID
+    available_id = next((i for i in range(len(customers)) if i not in customers), len(customers))
+    customers[available_id] = customer_name.strip()
+
+    return jsonify({"message": f"Customer added with ID {available_id}"}), 200
 
 def remove_customer(data):
     print(data)
-    customer_id = int(data.get('customer_id'))
+    customer_id = data.get('customer_id')
+
+    if customer_id is None:
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    customer_id = int(customer_id)
     print(customer_id)
     print(customers)
-
-    if not customer_id:
-        return jsonify({"error": "Missing required parameters"}), 400
 
     with lock:
         if customer_id not in customers:
