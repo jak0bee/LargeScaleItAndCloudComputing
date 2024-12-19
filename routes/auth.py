@@ -17,7 +17,7 @@ def get_redirect_uri():
 
 # Create an OAuth2 session
 def create_oauth_session():
-    redirect_uri = get_redirect_uri()
+    redirect_uri = get_redirect_uri()  # Dynamically set the redirect URI
     oauth = OAuth2Session(
         CLIENT_ID,
         redirect_uri=redirect_uri,
