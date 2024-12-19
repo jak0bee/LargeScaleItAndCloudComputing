@@ -3,14 +3,20 @@ from routes import customer_routes, dish_routes, auth
 from flasgger import Swagger
 import os
 
-
 app = Flask(__name__)
 swagger = Swagger(app)
+
+# Configure the secret key
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "default-secret-key")  # Use the env variable, fallback for local testing
 
 # Register blueprints
 app.register_blueprint(auth.bp)
 app.register_blueprint(customer_routes.bp, url_prefix='/api/customers')
 app.register_blueprint(dish_routes.dish_blueprint, url_prefix='/api/dish')
+
+@app.route('/')
+def redirect_to_apidocs():
+    return redirect('/apidocs')
 
 # Ensures authorization
 @app.before_request
@@ -38,12 +44,12 @@ def enforce_authorization_rules():
     # Permit all other requests
     return None
 
-# Now listens to Port 8080 to enable the correct gitlab redirect uri 
+# Now listens to Port 8080 to enable the correct GitLab redirect URI
 if __name__ == "__main__":
     # Disable the HTTPS requirement for OAuth2 (use only for development)
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
     # Relax token scope enforcement
     os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
-    app.secret_key = os.urandom(24)
-    app.run(host='0.0.0.0', port=8080)
+    print(app)
+    app.run(host='0.0.0.0',port=8080)

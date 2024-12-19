@@ -1,36 +1,36 @@
-from functools import wraps
-
 from flask import Blueprint, request, jsonify, redirect, url_for, session
 from requests_oauthlib import OAuth2Session
 
 bp = Blueprint('auth', __name__)
 
 # OAuth2 configuration
-CLIENT_ID = '076f9e789fac2f361c2e0145aa0cc7298cd6c5455492f3c90999480e40406d3f'
-CLIENT_SECRET = 'gloas-2b635dc4bf910399e28ed5ede32d88305bc7ebf6450150ee8a3cac4078fecf91'
+CLIENT_ID = '2ca545cff72c86c46b35194bc2440d728bbf22c7141675672f7006d422b1fc7f'
+CLIENT_SECRET = 'gloas-6e880c0b10efa99a5b245e6addc6addc9e1001c414f370705d588b90acb03870'
 AUTHORIZATION_BASE_URL = 'https://gitlab.com/oauth/authorize'
 TOKEN_URL = 'https://gitlab.com/oauth/token'
 API_BASE_URL = 'https://gitlab.com/api/v4'
-REDIRECT_URI = "http://localhost:8080/login/oauth2/code/gitlab"
+
+# This will be dynamically set based on the incoming request
+def get_redirect_uri():
+    # Dynamically build the redirect URI based on the incoming request
+    return f"{request.scheme}://{request.host}/login/oauth2/code/gitlab"
 
 # Create an OAuth2 session
-oauth = OAuth2Session(
-    CLIENT_ID,
-    redirect_uri=REDIRECT_URI,
-    scope=["openid", "profile", "email"]
-)
+def create_oauth_session():
+    redirect_uri = get_redirect_uri()
+    oauth = OAuth2Session(
+        CLIENT_ID,
+        redirect_uri=redirect_uri,
+        scope=["openid", "profile", "email"]
+    )
+    return oauth
 
 @bp.route('/login', methods=['GET'])
 def login():
     """
     GitLab OAuth2 Login
-    ---
-    tags:
-      - Authentication
-    responses:
-      302:
-        description: Redirects to GitLab OAuth2 login
     """
+    oauth = create_oauth_session()
     authorization_url, state = oauth.authorization_url(AUTHORIZATION_BASE_URL)
     session['oauth_state'] = state
     return redirect(authorization_url)
@@ -39,30 +39,12 @@ def login():
 def login_callback():
     """
     GitLab OAuth2 Login Callback
-    ---
-    tags:
-      - Authentication
-    parameters:
-      - name: code
-        in: query
-        type: string
-        required: true
-        description: The authorization code returned by GitLab
-      - name: state
-        in: query
-        type: string
-        required: false
-        description: The state returned by GitLab
-    responses:
-      302:
-        description: Redirects to the profile page or original destination
-      400:
-        description: Returns an error message if authentication fails
     """
     code = request.args.get('code')
     state = request.args.get('state')
 
     try:
+        oauth = create_oauth_session()
         token = oauth.fetch_token(
             TOKEN_URL,
             authorization_response=request.url,
@@ -82,37 +64,10 @@ def login_callback():
     # If there's no stored 'next' URL, redirect to the profile page
     return redirect("/apidocs")
 
-
 @bp.route('/profile', methods=['GET'])
 def profile():
     """
     Retrieve User Profile
-    ---
-    tags:
-      - Authentication
-    responses:
-      200:
-        description: Returns the authenticated user's profile information
-        schema:
-          type: object
-          properties:
-            email:
-              type: string
-              example: "user@example.com"
-            email_verified:
-              type: boolean
-              example: true
-            name:
-              type: string
-              example: "John Doe"
-            nickname:
-              type: string
-              example: "johnny"
-            picture:
-              type: string
-              example: "https://gitlab.com/uploads/-/system/user/avatar/1/avatar.png"
-      302:
-        description: Redirects to the login page if the user is not authenticated
     """
     if 'user_info' in session:
         return jsonify(session['user_info'])
@@ -123,12 +78,6 @@ def profile():
 def logout():
     """
     Logout
-    ---
-    tags:
-      - Authentication
-    responses:
-      302:
-        description: Clears the session and redirects to the login page
     """
     session.clear()
     return redirect(url_for('.login'))

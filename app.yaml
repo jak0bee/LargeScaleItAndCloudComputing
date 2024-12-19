@@ -2,4 +2,5 @@ runtime: python39  # Specify your Python runtime version
 entrypoint: gunicorn -b :$PORT app:app  # Use gunicorn to serve the app
 
 env_variables:
-  FLASK_ENV: 'production'  # Optional: Set to production if you want it
+  FLASK_ENV: 'production' 
+  FLASK_SECRET_KEY: 'bR1jLx3vZ8qfC7yKpG9sV5dQ2tRmX2o'
