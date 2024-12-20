@@ -177,7 +177,7 @@ def pay_dish_route():
             customer_id:
               type: string
               description: The unique identifier of the customer.
-              example: "0"
+              example: "1"
     responses:
       200:
         description: Payment successful.
