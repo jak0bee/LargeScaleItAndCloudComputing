@@ -34,7 +34,7 @@ def order_dish(data):
 
         # Decrease the availability of the dish
         if decrease_dish_availability == 1:
-            dev_log('dish ordered successfully, customerId = ' + str(customer_id + ', dish_id = ' + str(dish_id))
+            dev_log('dish ordered successfully, customerId = ' + str(customer_id) + ', dish_id = ' + str(dish_id))
             return jsonify({"message": "Dish ordered successfully"}), 200
         else:
             dev_log('error while deceasing the dish availability , customerId = ' + customer_id + ', dish_id = ' + dish_id)
