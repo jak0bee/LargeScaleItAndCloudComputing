@@ -3,6 +3,7 @@ from models.kitchen_model import orders_queue
 from utils.lock_manager import lock
 from flask import jsonify
 from database.database_connection import app, db
+from sqlalchemy.exc import SQLAlchemyError
 
 # Order a dish for a customer
 def order_dish(data):
@@ -43,8 +44,8 @@ def order_dish(data):
 def add_dish(data):
     name = data.get("name")
     description = data.get('description')
-    ammount_available = data.get('ammount_available')
-    price = data.get("price")
+    ammount_available = int(data.get('ammount_available'))
+    price = float(data.get("price"))
     
     with lock:
 
@@ -56,15 +57,15 @@ def add_dish(data):
             dev_log('Tried adding a dish with price not a float')
             return jsonify({"error": "price parameter needs to be a float"}), 400
         
-        if not isinstance(int,ammount_available):
+        if not isinstance(ammount_available,int):
             dev_log('Tried adding a dish with ammount_avaialble not an int')
             return jsonify({"error": "ammount_available parameter needs to be an int"}), 400
 
-        if not isinstance(str, name):
+        if not isinstance(name,str):
             dev_log('Tried adding a dish with name not a string')
             return jsonify({"error": "name parameter needs to be a string"}), 400
         
-        if not isinstance(str, description):
+        if not isinstance(description,str):
             dev_log('Tried adding a dish with description not a string')
             return jsonify({"error": "description parameter needs to be a string"}), 400
         
@@ -81,7 +82,7 @@ def add_dish(data):
 
 # Remove a dish from the menu, mode = 1 delete if its not in any orders (payed or not), mode =2 delte and delete from orders
 def remove_dish(data):
-    dish_id = data.get('dish_id')
+    dish_id = int(data.get('dish_id'))
     mode = data.get('mode')
 
     if not dish_id or not mode:
@@ -89,7 +90,7 @@ def remove_dish(data):
         return jsonify({"error": "Missing required parameters"}), 400
 
     with lock:
-        if not isinstance(int, mode):
+        if not isinstance(mode,int):
             dev_log('tried removing a dish with mode that is not a string')
             return jsonify({"error": "mode parameter has to be an int with value 1 or 2"}), 400
 
@@ -97,7 +98,7 @@ def remove_dish(data):
             dev_log('tried removing a dish with mode that is not 1 or 2')
             return jsonify({"error": "mode parameter has to be an int with value 1 or 2"}), 400
 
-        if not isinstance(int, dish_id):
+        if not isinstance(dish_id,int):
             dev_log('tried removing a dish with dishId parameter that is not an int')
             return jsonify({"error": "dishId parameter has to be an int"}), 400
     
@@ -284,24 +285,26 @@ def decrease_dish_availability(dish_id:int):
 
         return 1
     
-def insert_dish(name : str, description : str ,ammount_available:int, price:float):
+def insert_dish(name: str, description: str, ammount_available: int, price: float):
     with app.app_context():
         query = db.text("""
             INSERT INTO Dishes (name, description, ammountAvaialable, price)
-            VALUES (:name, :description, :amount_available, :price)
+            VALUES (:name, :description, :ammount_available, :price)
         """)
         result = db.session.execute(
             query,
             {
                 "name": name,
                 "description": description,
-                "amount_available": ammount_available,
+                "ammountAvaialable": ammount_available,
                 "price": price
             }
         )
         db.session.commit()
 
-    return 1
+        # Return the ID of the newly inserted dish if available
+        return result.lastrowid if hasattr(result, "lastrowid") else "Insert successful"
+
 
 def check_dish_removal(dish_id : int):
     result = ''

@@ -1,6 +1,7 @@
 # from models.customer_model import customers, customers_x_dishes
 from utils.lock_manager import lock
 from flask import jsonify
+from database.database_connection import app, db
 
 def create_customer(data):
     # Extract 'customer_name' from the request data
@@ -13,7 +14,7 @@ def create_customer(data):
     # Reuse the lowest available ID
     insert_customer(name= customer_name)
 
-    return jsonify({"message": f"Customer added with ID {available_id}"}), 200
+    return jsonify({"message": f"Customer added successfully"}), 200
 
 
 
@@ -33,7 +34,7 @@ def remove_customer(data):
 def insert_customer(name : str):
     with app.app_context():
         query = db.text("""
-            INSERT INTO Customer (name)
+            INSERT INTO Customers (name)
             VALUES (:name)
         """)
         result = db.session.execute(

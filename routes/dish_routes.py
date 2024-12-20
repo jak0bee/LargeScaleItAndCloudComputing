@@ -1,13 +1,13 @@
 from flask import Blueprint, request, jsonify
 
-from services.dish_service import order_dish, add_dish, remove_dish, pay_dish, get_all_dishes, check_dish_availability, \
+from services.dish_service import order_dish, add_dish, remove_dish, pay_orders, get_all_dishes, check_dish_availability, \
     prepare_next_dish, get_all_customers_dishes
 from utils.auth_utils import customer_role_required, kitchen_role_required
 
 dish_blueprint = Blueprint('dish', __name__)
 
 @dish_blueprint.route('/order_dish', methods=['POST'])
-@customer_role_required
+#@customer_role_required
 def order_dish_route():
     """
     Order a Dish
@@ -52,7 +52,7 @@ def order_dish_route():
     return order_dish(data)
 
 @dish_blueprint.route('/add_dish', methods=['POST'])
-@kitchen_role_required
+#@kitchen_role_required
 def add_dish_route():
     """
     Add a New Dish
@@ -67,9 +67,17 @@ def add_dish_route():
         schema:
           type: object
           properties:
-            dish_id:
+            name:
               type: string
-              description: The unique identifier of the dish.
+              description: The unique name of the dish.
+              example: "Steak"
+            description:
+              type: string
+              description: Summary of the dish
+              example: "Steak with fries and a side of fried onions"
+            ammount_available:
+              type: number
+              description: Ammount of the dish in the kitchen.
               example: "67890"
             price:
               type: number
@@ -105,8 +113,9 @@ def add_dish_route():
     return add_dish(data)
 
 @dish_blueprint.route('/remove_dish', methods=['POST'])
-@kitchen_role_required
+#@kitchen_role_required
 def remove_dish_route():
+    
     """
     Remove a Dish
     ---
@@ -123,7 +132,11 @@ def remove_dish_route():
             dish_id:
               type: string
               description: The unique identifier of the dish.
-              example: "67890"
+              example: "0"
+            mode:
+              type: string
+              description: The unique identifier of the dish.
+              example: "2"
     responses:
       200:
         description: Dish removed successfully.
@@ -146,7 +159,7 @@ def remove_dish_route():
     return remove_dish(data)
 
 @dish_blueprint.route('/pay_dish', methods=['POST'])
-@customer_role_required
+#@customer_role_required
 def pay_dish_route():
     """
     Pay for Dishes
@@ -184,7 +197,7 @@ def pay_dish_route():
               example: "Missing required parameters"
     """
     data = request.json
-    return pay_dish(data)
+    return pay_orders(data)
 
 @dish_blueprint.route('/get_all_dishes', methods=['GET'])
 def get_all_dishes_route():
@@ -281,7 +294,7 @@ def check_dish_availability_route():
     return check_dish_availability(data)
 
 @dish_blueprint.route('/prepare_next_dish', methods=['POST'])
-@kitchen_role_required
+#@kitchen_role_required
 def prepare_next_dish_route():
     """
     Prepare the Next Dish

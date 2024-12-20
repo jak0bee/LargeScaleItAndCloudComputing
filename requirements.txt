@@ -2,3 +2,6 @@ Flask
 flasgger
 gunicorn
 requests_oauthlib
+flask-socketio
+flask_sqlalchemy
+pymysql
