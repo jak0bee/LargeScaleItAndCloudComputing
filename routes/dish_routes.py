@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 
-from services.dish_service import order_dish, add_dish, remove_dish, pay_dish, get_all_dishes
+from services.dish_service import order_dish, add_dish, remove_dish, pay_dish, get_all_dishes, check_dish_availability, \
+    prepare_next_dish, get_all_customers_dishes
 from utils.auth_utils import customer_role_required, kitchen_role_required
 
 dish_blueprint = Blueprint('dish', __name__)
@@ -24,7 +25,7 @@ def order_dish_route():
             customer_id:
               type: string
               description: The unique identifier of the customer.
-              example: "12345"
+              example: "0"
             dish_id:
               type: string
               description: The unique identifier of the dish.
@@ -163,11 +164,7 @@ def pay_dish_route():
             customer_id:
               type: string
               description: The unique identifier of the customer.
-              example: "12345"
-            total_price:
-              type: number
-              description: The total price of the ordered dishes.
-              example: 45.50
+              example: "0"
     responses:
       200:
         description: Payment successful.
@@ -215,4 +212,102 @@ def get_all_dishes_route():
                 example: 12.99
     """
     return get_all_dishes()  # Call the function directly, no need to wrap with jsonify
+
+@dish_blueprint.route('/get_all_customers_dishes', methods=['GET'])
+def get_all_customers_dishes_route():
+    """
+    Get All Customers' Dishes
+    ---
+    tags:
+      - Customer Dishes
+    responses:
+      200:
+        description: List of all customers and their received dishes
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              customer_id:
+                type: integer
+                example: 1
+              dishes:
+                type: array
+                items:
+                  type: string
+                example: ["dish1", "dish2"]
+    """
+    return get_all_customers_dishes()  # Call the function directly, no need to wrap with jsonify
+
+
+@dish_blueprint.route('/check_dish_availability', methods=['POST'])
+def check_dish_availability_route():
+    """
+    Check Dish Availability
+    ---
+    tags:
+      - Dish Operations
+    summary: Check if a specific dish is available.
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            dish_id:
+              type: string
+              description: The unique identifier of the dish.
+              example: "67890"
+    responses:
+      200:
+        description: Dish availability status.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Dish is available"
+      400:
+        description: Missing or invalid parameters.
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: "Missing required parameters"
+    """
+    data = request.json
+    return check_dish_availability(data)
+
+@dish_blueprint.route('/prepare_next_dish', methods=['POST'])
+@kitchen_role_required
+def prepare_next_dish_route():
+    """
+    Prepare the Next Dish
+    ---
+    tags:
+      - Kitchen Operations
+    summary: Prepare the next dish in the order queue.
+    responses:
+      200:
+        description: Dish prepared successfully.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Dish prepared successfully for customer."
+      400:
+        description: No orders to prepare.
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: "No orders to prepare"
+    """
+    return prepare_next_dish()
+
+
 
