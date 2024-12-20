@@ -130,7 +130,7 @@ def pay_orders(data):
         return jsonify({"error": "Missing required parameters"}), 400
 
     with lock:
-        if not isinstance(int, customer_id):
+        if not isinstance(customer_id, int):
             dev_log('tried paying for order with customerId not being an int')
             return jsonify({"error": "customer_id parameter has to be an int"}), 400
 
