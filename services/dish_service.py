@@ -83,7 +83,7 @@ def add_dish(data):
 # Remove a dish from the menu, mode = 1 delete if its not in any orders (payed or not), mode =2 delte and delete from orders
 def remove_dish(data):
     dish_id = int(data.get('dish_id'))
-    mode = data.get('mode')
+    mode = int(data.get('mode'))
 
     if not dish_id or not mode:
         dev_log('Tried removing a dish with missing parameters')

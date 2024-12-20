@@ -25,7 +25,7 @@ def order_dish_route():
             customer_id:
               type: string
               description: The unique identifier of the customer.
-              example: "0"
+              example: "1"
             dish_id:
               type: string
               description: The unique identifier of the dish.
