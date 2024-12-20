@@ -11,29 +11,52 @@ def create_customer(data):
         return jsonify({"error": "Customer name cannot be empty"}), 400
 
     # Reuse the lowest available ID
-    available_id = next((i for i in range(len(customers)) if i not in customers), len(customers))
-    customers[available_id] = customer_name.strip()
+    insert_customer(name= customer_name)
 
     return jsonify({"message": f"Customer added with ID {available_id}"}), 200
 
-def remove_customer(data):
-    print(data)
-    customer_id = data.get('customer_id')
 
+
+def remove_customer(data):
+    customer_id = data.get('customer_id')
     if customer_id is None:
         return jsonify({"error": "Missing required parameters"}), 400
 
     customer_id = int(customer_id)
-    print(customer_id)
-    print(customers)
 
     with lock:
-        if customer_id not in customers:
-            return jsonify({"error": "No Customer with Id provided"}), 400
-
-        delete_customer(customer_id)
+        hard_remove_customer(customer_id)
         return jsonify({"message": "Customer removed successfully"}), 200
 
-def delete_customer(customer_id):
-    #del customers_x_dishes[customer_id]
-    del customers[customer_id]
+## Methods for interacting with the database
+    
+def insert_customer(name : str):
+    with app.app_context():
+        query = db.text("""
+            INSERT INTO Customer (name)
+            VALUES (:name)
+        """)
+        result = db.session.execute(
+            query,
+            {
+                "name": name
+            }
+        )
+        db.session.commit()
+    return 1
+
+
+
+def hard_remove_customer(customer_id : int):
+    with app.app_context():
+        query = db.text("""
+            CALL hardDeleteCustomer(:customerId)
+        """)
+        result = db.session.execute(
+            query,
+            {
+                "customerId": customer_id
+            }
+        )
+        db.session.commit()
+    return 

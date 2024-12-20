@@ -79,8 +79,6 @@ def add_dish(data):
             dev_log('Error while inserting a dish')
             return jsonify({"error": "error while inserting a dish, contact an administrator"}), 400
 
-
-
 # Remove a dish from the menu, mode = 1 delete if its not in any orders (payed or not), mode =2 delte and delete from orders
 def remove_dish(data):
     dish_id = data.get('dish_id')
@@ -123,27 +121,23 @@ def remove_dish(data):
 
 
 # Pay for a customer's ordered dishes
-def pay_order(data):
+def pay_orders(data):
     customer_id = data.get('customer_id')
 
     if customer_id is None:  # Check for missing parameter
+        dev_log('tried paying for order with data missing a customerId')
         return jsonify({"error": "Missing required parameters"}), 400
 
-    customer_id = int(customer_id)  # Ensure it's an integer
-
     with lock:
-        if customer_id not in customers_x_dishes or not customers_x_dishes[customer_id]:
-            return jsonify({"error": "No orders found for this customer"}), 400
+        if not isinstance(int, customer_id):
+            dev_log('tried paying for order with customerId not being an int')
+            return jsonify({"error": "customer_id parameter has to be an int"}), 400
 
-        total_price = 0
-        # Calculate the total price of all ordered dishes
-        for dish_id in customers_x_dishes[customer_id]:
-            if dish_id in dishes:
-                total_price += dishes[dish_id][1]  # Add the price of the dish
+        total_price = check_price_total(customer_id)
 
         # Clear the customer's orders after payment
-        customers_x_dishes[customer_id] = []
-
+        pay_customers_orders(customer_id)
+        dev_log('customer ' + str(customer_id) + ' payed ' + str(total_price) + ' for all his orders')
         return jsonify({"message": "Payment successful", "total_price": total_price}), 200
 
 
@@ -151,29 +145,64 @@ def get_all_dishes():
     """
     Returns a list of all dishes with their availability and price.
     """
-    with lock:
-        all_dishes = []
-        for dish_id, (available, price) in dishes.items():
-            all_dishes.append({
-                "dish_id": dish_id,
-                "available": available,
-                "price": price
-            })
-        return jsonify(all_dishes), 200
+    try:
+        with app.app_context():
+            query = db.text("""
+                SELECT Id AS dish_id, ammountAvaialable AS available, price
+                FROM Dishes
+            """)
+            result = db.session.execute(query).fetchall()
+
+            all_dishes = [
+                {
+                    "dish_id": row.dish_id,
+                    "available": row.available,
+                    "price": row.price
+                }
+                for row in result
+            ]
+
+            return jsonify(all_dishes), 200
+
+    except SQLAlchemyError as e:
+        return jsonify({"error": "Failed to fetch dishes", "details": str(e)}), 500
 
 
 def get_all_customers_dishes():
     """
     Returns a list of all customers with their received dishes.
     """
-    with lock:
-        all_customers_dishes = []
-        for customer_id, dishes_list in customers_x_dishes.items():
-            all_customers_dishes.append({
-                "customer_id": customer_id,
-                "dishes": dishes_list
-            })
-        return jsonify(all_customers_dishes), 200
+    try:
+        with app.app_context():
+            # Query the Customers and their dishes
+            query = db.text("""
+                SELECT 
+                    c.Id AS customer_id, 
+                    COALESCE(json_agg(
+                        json_build_object('dish_id', d.Id, 'name', d.name)
+                    ) FILTER (WHERE d.Id IS NOT NULL), '[]') AS dishes
+                FROM Customers c
+                LEFT JOIN Orders o ON c.Id = o.CustomerId
+                LEFT JOIN OrderXdish od ON o.Id = od.OrderId
+                LEFT JOIN Dishes d ON od.DishId = d.Id
+                GROUP BY c.Id
+            """)
+            result = db.session.execute(query).fetchall()
+
+            # Transform result into a list of dictionaries
+            all_customers_dishes = [
+                {
+                    "customer_id": row.customer_id,
+                    "dishes": row.dishes
+                }
+                for row in result
+            ]
+
+            return jsonify(all_customers_dishes), 200
+
+    except SQLAlchemyError as e:
+        return jsonify({"error": "Failed to fetch customer dishes", "details": str(e)}), 500
+
 
 
 def prepare_next_dish():
@@ -189,13 +218,11 @@ def prepare_next_dish():
         order = orders_queue.pop(0)
         dish_id, customer_id = order.popitem()
 
-        # Add the dish to the  customer's bill
-        customer_bill = customers_x_dishes.get(customer_id, [])
-        customer_bill.append(dish_id)
-        customers_x_dishes[customer_id] = customer_bill
+        # Check to what order should we add the dish
+        orderId = get_latest_order(customer_id)
+        add_dish_to_order(dish_id, orderId)
 
         # No need to decrease availability, because it will be decresed upon ordering -
-        # Prohibits ordering a dish that will become unavailable later
         message = f"Dish {dish_id} prepared for customer {customer_id}"
         dev_log(message)
         return jsonify({"message": f"Dish {dish_id} prepared for customer {customer_id}"}), 200
@@ -298,6 +325,66 @@ def hard_remove_dish(dish_id : int):
         result = db.session.execute(
             query,
             {
+                "dishId": dish_id
+            }
+        )
+        db.session.commit()
+    return 1
+
+def check_price_total(customer_id):
+    result = ''
+    with app.app_context():
+        query = db.text("""
+            CALL getCustomersTotal(:customer_id)
+        """)
+        result = db.session.execute(
+        query,
+        {
+            "customer_id": str(customer_id)
+        }
+        )
+        result = result.scalar()
+    return result
+
+
+def pay_customers_orders(customer_id):
+    with app.app_context():
+        query = db.text("""
+            UPDATE Orders Set isPayed = 1 WHERE CustomerId = :customerId
+        """)
+        result = db.session.execute(
+            query,
+            {
+                "customerId": customer_id
+            }
+        )
+        db.session.commit()
+    return 1
+
+def get_latest_order(customer_id):
+    with app.app_context():
+        query = db.text("""
+            SELECT Id FROM Orders WHERE CustomerId = :customerId AND isPayed = 0 ORDER BY ID LIMIT 1;
+        """)
+        result = db.session.execute(
+            query,
+            {
+                "customerId": customer_id
+            }
+        )
+        result = result.scalar()
+    return result
+
+def add_dish_to_order(dish_id, order_id):
+    with app.app_context():
+        query = db.text("""
+            INSERT INTO OrderXdish(OrderId, DishId)
+            VALUES(:orderId, :dishId)
+        """)
+        result = db.session.execute(
+            query,
+            {
+                "orderId": order_id,
                 "dishId": dish_id
             }
         )
