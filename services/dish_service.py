@@ -158,7 +158,7 @@ def get_all_dishes():
                     "dish_id": row.dish_id,
                     "available": row.available,
                     "price": row.price
-                }
+                }  
                 for row in result
             ]
 
@@ -176,16 +176,18 @@ def get_all_customers_dishes():
         with app.app_context():
             # Query the Customers and their dishes
             query = db.text("""
-                SELECT 
-                    c.Id AS customer_id, 
-                    COALESCE(json_agg(
-                        json_build_object('dish_id', d.Id, 'name', d.name)
-                    ) FILTER (WHERE d.Id IS NOT NULL), '[]') AS dishes
+                SELECT
+                    c.Id AS customer_id,
+                    COALESCE(
+                        CONCAT('[', GROUP_CONCAT(
+                            DISTINCT JSON_OBJECT('dish_id', d.Id, 'name', d.name)
+                            SEPARATOR ', '
+                        ), ']'), '[]') AS dishes
                 FROM Customers c
                 LEFT JOIN Orders o ON c.Id = o.CustomerId
                 LEFT JOIN OrderXdish od ON o.Id = od.OrderId
                 LEFT JOIN Dishes d ON od.DishId = d.Id
-                GROUP BY c.Id
+                GROUP BY c.Id;
             """)
             result = db.session.execute(query).fetchall()
 
