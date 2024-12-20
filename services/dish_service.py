@@ -288,14 +288,14 @@ def insert_dish(name : str, description : str ,ammount_available:int, price:floa
     with app.app_context():
         query = db.text("""
             INSERT INTO Dishes (name, description, ammountAvaialable, price)
-            VALUES (:name, :description, :amount_available, :price)
+            VALUES (:name, :description, :ammount_available, :price)
         """)
         result = db.session.execute(
             query,
             {
                 "name": name,
                 "description": description,
-                "amount_available": ammount_available,
+                "ammountAvaialable": ammount_available,
                 "price": price
             }
         )
