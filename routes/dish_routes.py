@@ -132,7 +132,7 @@ def remove_dish_route():
             dish_id:
               type: string
               description: The unique identifier of the dish.
-              example: "0"
+              example: "1"
             mode:
               type: string
               description: The unique identifier of the dish.
