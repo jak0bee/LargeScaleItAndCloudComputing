@@ -31,7 +31,7 @@ def order_dish(data):
             return jsonify({"error": "Dish not available"}), 400
 
         # Add the dish to the list of orders to be prepared
-        new_order = {dish_id: customer_id}
+        new_order = [dish_id, customer_id]
         orders_queue.append(new_order)
 
         # Decrease the availability of the dish
@@ -130,7 +130,7 @@ def remove_dish(data):
 
 # Pay for a customer's ordered dishes
 def pay_orders(data):
-    customer_id = data.get('customer_id')
+    customer_id = int(data.get('customer_id'))
 
     if customer_id is None:  # Check for missing parameter
         dev_log('tried paying for order with data missing a customerId')
@@ -220,13 +220,14 @@ def prepare_next_dish():
     Prepares the next dish in the orders queue (here instantly). This should be called any time a kitchen / cook is free
     """
     with lock:
-        if not orders_queue:
+        if len(orders_queue)==0:
             dev_log('tried to prepare orders with nothing in the queue')
             return jsonify({"error": "No orders to prepare"}), 400
 
         # Get the first order in the queue
         order = orders_queue.pop(0)
-        dish_id, customer_id = order.popitem()
+        dish_id = order[0]
+        customer_id = order[1]
 
         # Check to what order should we add the dish
         orderId = get_latest_order(customer_id)
@@ -350,6 +351,7 @@ def hard_remove_dish(dish_id : int):
     return 1
 
 def check_price_total(customer_id):
+    customer_id = str(customer_id)
     result = ''
     with app.app_context():
         query = db.text("""
