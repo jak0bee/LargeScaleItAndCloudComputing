@@ -175,9 +175,9 @@ def pay_dish_route():
           type: object
           properties:
             customer_id:
-              type: string
+              type: number
               description: The unique identifier of the customer.
-              example: "1"
+              example: 1
     responses:
       200:
         description: Payment successful.
@@ -271,7 +271,7 @@ def check_dish_availability_route():
             dish_id:
               type: string
               description: The unique identifier of the dish.
-              example: "67890"
+              example: "3"
     responses:
       200:
         description: Dish availability status.
@@ -291,7 +291,7 @@ def check_dish_availability_route():
               example: "Missing required parameters"
     """
     data = request.json
-    return check_dish_availability(data)
+    return str(check_dish_availability(data))
 
 @dish_blueprint.route('/prepare_next_dish', methods=['POST'])
 #@kitchen_role_required

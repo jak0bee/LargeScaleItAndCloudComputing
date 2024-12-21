@@ -18,14 +18,16 @@ def order_dish(data):
 
     with lock:
         if check_customer_id(customer_id) == 0:
-            dev_log('customerId not provided')
+            dev_log('Invalid customerId provided')
             return jsonify({"error": "No customer with provided id"}), 400
-        dish_check_result = check_dish_availability(dish_id)
+
+        dish_check_result = check_dish_availability(int(dish_id))
         if dish_check_result == -1:
-            dev_log('tried ordering a dish with wrong dishId')
+            dev_log('Invalid dishId provided')
             return jsonify({"error": "No dish with provided id"}), 400
+
         if dish_check_result == 0:  # Check if dish is available
-            dev_log('Tried ordering a dish that is not available')
+            dev_log(f'Dish not available for customerId={customer_id}, dishId={dish_id}')
             return jsonify({"error": "Dish not available"}), 400
 
         # Add the dish to the list of orders to be prepared
@@ -33,12 +35,17 @@ def order_dish(data):
         orders_queue.append(new_order)
 
         # Decrease the availability of the dish
-        if decrease_dish_availability == 1:
-            dev_log('dish ordered successfully, customerId = ' + str(customer_id) + ', dish_id = ' + str(dish_id))
-            return jsonify({"message": "Dish ordered successfully"}), 200
-        else:
-            dev_log('error while deceasing the dish availability , customerId = ' + customer_id + ', dish_id = ' + dish_id)
-            return jsonify({"message": "Error while decreasing the dish availability please contact the administrator"}), 400
+        try:
+            if decrease_dish_availability(dish_id) == 1:
+                dev_log(f'Dish ordered successfully: customerId={customer_id}, dishId={dish_id}')
+                return jsonify({"message": "Dish ordered successfully"}), 200
+            else:
+                dev_log(f'Error while decreasing dish availability: customerId={customer_id}, dishId={dish_id}')
+                return jsonify({"error": "Error while decreasing the dish availability. Please contact the administrator"}), 500
+        except Exception as e:
+            dev_log(f'Exception while decreasing dish availability: {e}')
+            return jsonify({"error": "An unexpected error occurred"}), 500
+
 
 # Add a new dish to the menu
 def add_dish(data):
@@ -74,7 +81,7 @@ def add_dish(data):
             return jsonify({"error": "price parameter needs to be not negative"}), 400
 
         result = insert_dish(name, description, ammount_available, price)
-        if result == 1:
+        if result >= 1:
             return jsonify({"message": "Dish added successfully"}), 200
         else:
             dev_log('Error while inserting a dish')
@@ -236,6 +243,12 @@ def prepare_next_dish():
 
 
 def check_dish_availability(dish_id):
+    if isinstance(dish_id, str):
+        dish_id = int(dish_id)
+    if not isinstance(dish_id, int):
+        dish_id = dish_id.get('dish_id')
+    
+
     result = ''
     with app.app_context():
         query = db.text("""
@@ -289,7 +302,7 @@ def insert_dish(name: str, description: str, ammount_available: int, price: floa
     with app.app_context():
         query = db.text("""
             INSERT INTO Dishes (name, description, ammountAvaialable, price)
-            VALUES (:name, :description, :ammount_available, :price)
+            VALUES (:name, :description, :ammountAvaialable, :price)
         """)
         result = db.session.execute(
             query,
